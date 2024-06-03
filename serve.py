@@ -3,11 +3,13 @@ import os
 import re
 import pandas as pd
 import warnings
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import urllib
+
 
 # Usage example
 # $ python3 serve.py "Run 19 Logs"
-
 def chldrn_labeled_with_date(parent):
     # parent: path of parent
     # returns only child directories labeled with ##-##-##
@@ -33,7 +35,10 @@ def concatenate_date_dirs(parent):
 
     channels = {}
 
+
     for dir in dirs:
+        print(f"Parsing {dir.path}")
+
         day = dir.name
         # TODO: reenable this line
         # print(f'Injesting contents of folder {day}')
@@ -47,8 +52,8 @@ def concatenate_date_dirs(parent):
             elif (df.name.startswith('Status_')):
                 pass
             # temporarily only consider channel 1
-            elif (not df.name.startswith('CH1 T')):
-                pass
+            # elif (not df.name.startswith('CH1 T')):
+            #     pass
             else:
                 chnl_name = df.name[:-12].strip()
                 data = pd.read_csv(df.path, header=None)
@@ -67,19 +72,50 @@ def concatenate_date_dirs(parent):
 
 url = sys.argv[1]
 
+print('Building Data...')
+
 channels = concatenate_date_dirs(url)
 
-def get_data_in_range(df, start, end):
-    # df: dataframe
-    # start: start time, ISO 8601
-    # end: end time, ISO 8601
-    return df[start:end]
+print('Available channels:')
+for ch in channels:
+    print(ch)
 
-print('channels[\'CH1 T\']', channels['CH1 T'])
+print()
+print("Serving...")
 
-print(channels['CH1 T']["2023-04-22T10:36:20":"2023-04-22T15:38:59"])
+class HTTP_request_handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        u = urllib.parse.urlparse(self.path)
+        query = urllib.parse.parse_qs(u.query)
 
-channels['CH1 T']["2023-04-22T10:36:20":"2023-04-22T15:38:59"][2].plot()
-plt.show()
-# subset = get_data_in_range(channels['CH1 T'], "2023-04-22T01:50:32.074", "2023-04-23T06:00:10.072")
-# print('subset', subset)
+        # parse escaped characters (ex. '%3A' --> ':')
+        channel = urllib.parse.unquote(u.path)
+
+        # ignore the leading '/'
+        channel = channel[1:]
+
+        start = query['from'][0]
+        end = query['to'][0]
+        results = channels[channel][start:end]
+
+        csv = results.to_csv()
+
+        # TODO: error handling, file not found
+
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/csv')
+        self.end_headers()
+        self.wfile.write(csv.encode())
+
+if __name__ == "__main__":
+    httpd = HTTPServer(('localhost', 8080), HTTP_request_handler)
+    httpd.serve_forever()
+
+# channels['CH1 T']["2023-04-22T10:36:20":"2023-04-22T15:38:59"][2].plot()
+# plt.show()
+
+
+
+
+
+
