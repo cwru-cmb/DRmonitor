@@ -5,6 +5,7 @@ from datetime import datetime
 import pandas as pd
 import io
 import injest
+from channel import Channel
 # import matplotlib.pyplot as plt
 
 # approximate upper limit of entries in a response
@@ -16,15 +17,13 @@ SAMPLE_THRESHOLD = 4000
 # https://docs.python.org/3/library/datetime.html#format-codes
 QUERY_FMT = "%Y-%m-%dT%H:%M:%S"
 
-def update_channel(channel):
-    new_data = channel['file'].read()
+def update_channel(channel: Channel):
+    new_data = channel.file.read()
 
     if (len(new_data) is not 0):
         new_df = pd.read_csv(io.StringIO(new_data), header=None)
-
         injest.prep_dataframe(new_df)
-
-        channel['data'] = pd.concat((channel['data'], new_df))
+        channel.add_data(new_df)
 
 
 def serve(channels):
@@ -45,16 +44,16 @@ def serve(channels):
             # if the request extends past the current end to the data,
             # check to see if there is new data
             end_dt = datetime.strptime(end, QUERY_FMT)
-            most_recent_entry = channels[channel]['data'].index[-1]
+            most_recent_entry = channels[channel].data.index[-1]
 
             if (end_dt > most_recent_entry): update_channel(channels[channel])
 
-            results = channels[channel]['data'][start:end]
+            results = channels[channel].data[start:end]
 
             # if there is nothing to show in the given time range,
             # return the entire range of data so that grafana still
             # has something to work with and can show the "zoom to data" button
-            if (results.size == 0): results = channels[channel]['data']
+            if (results.size == 0): results = channels[channel].data
 
             # For large time scales, we can't return all the points
             # and still be performant. For now, we naïvely sample entries
