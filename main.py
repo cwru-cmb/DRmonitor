@@ -8,13 +8,9 @@ print('Building Data...')
 
 # All data is listed in the channels object
 # TODO: channels should have their own class
-channels = injest.concatenate_date_dirs(url)
-
-print('Available channels:')
-for ch in sorted(channels.keys()):
-    print(ch)
+channels = injest.injest_date_dirs(url)
 
 print()
-print("Serving...")
+print("Starting Server...")
 
 serve.serve(channels)

@@ -15,18 +15,22 @@ SAMPLE_THRESHOLD = 4000
 
 # Format for date queries, in spec with
 # https://docs.python.org/3/library/datetime.html#format-codes
+# should match what you've configured grafana to use
 QUERY_FMT = "%Y-%m-%dT%H:%M:%S"
+
+# Port of localhost on which to serve
+PORT = 8080
 
 def update_channel(channel: Channel):
     new_data = channel.file.read()
 
-    if (len(new_data) is not 0):
+    if (len(new_data) != 0):
         new_df = pd.read_csv(io.StringIO(new_data), header=None)
         injest.prep_dataframe(new_df)
         channel.add_data(new_df)
 
 
-def serve(channels):
+def serve(channels: dict[Channel]):
     class HTTP_request_handler(BaseHTTPRequestHandler):
         def do_GET(self):
             request = urllib.parse.urlparse(self.path)
@@ -71,7 +75,14 @@ def serve(channels):
             self.wfile.write(csv.encode())
     
 
-    httpd = HTTPServer(('localhost', 8080), HTTP_request_handler)
+    httpd = HTTPServer(('localhost', PORT), HTTP_request_handler)
+
+    print(f"Serving at http://localhost:{PORT}/")
+    print("Available endpoints:")
+    for ch in sorted(channels.keys()):
+        print(ch)
+    print()
+
     httpd.serve_forever()
 
 
@@ -80,7 +91,7 @@ if __name__ == "__main__":
     import serve
     import injest
 
-    channels = injest.concatenate_date_dirs('url/to/data')
+    channels = injest._dirs('url/to/data')
     
     serve.serve(channels)""")
 

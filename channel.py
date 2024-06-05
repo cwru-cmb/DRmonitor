@@ -16,7 +16,7 @@ class Channel:
         name: the name of the channel
     """
 
-    def __init__(self, name: str | None = None) -> None:
+    def __init__(self, name: str | None = None):
         self.name: str = name
         self.paths: list[str] = []
         self.data: pd.DataFrame | None = None
@@ -26,12 +26,12 @@ class Channel:
 
     def _d(self, date): return datetime.strptime(date, "%y-%m-%d")
     
-    def add_data(self, newData: pd.DataFrame) -> None:
+    def add_data(self, newData: pd.DataFrame):
         """Appends newData to previous data using pandas.concat"""
         if (self.data is None): self.data = newData
         else: self.data = pd.concat((self.data, newData))
     
-    def add_path(self, path: str) -> None:
+    def add_path(self, path: str):
         """"Adds file path to the list of contributing file paths"""
         self.paths.append(path)
 
@@ -52,7 +52,7 @@ class Channel:
         
         return mrp
     
-    def open_recent(self) -> None:
+    def open_recent(self):
         """
         Opens the most recent file in paths
         """

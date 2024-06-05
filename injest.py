@@ -3,68 +3,41 @@ import os
 import re
 import warnings
 import pandas as pd
+import posix
 
 from channel import Channel
 # import matplotlib.pyplot as plt
 
 # TODO: lakeshore, etc.
 
-def chldrn_labeled_with_date(parent):
-    # parent: path of parent
-    # returns only child directories labeled with ##-##-##
+def _chldrn_labeled_with_date(parent: str):
+    """Returns child directories labeled with ##-##-## """
 
     contents = os.scandir(parent)
     p = re.compile(r'^\d\d-\d\d-\d\d$')
     return [ child for child in contents if (p.match(child.name) and child.is_dir()) ]
 
 
-def prep_dataframe(df):
-    # df: dataframe
-    # sets index to datetime in place
+def _injest_file(entry: posix.DirEntry, channels: dict[Channel]):
+    """Adds data from entry into channels, creating a new one if none exists"""
 
-    df['datetime'] = pd.to_datetime(df[0] + ' ' + df[1], format="%d-%m-%y %H:%M:%S")
-    df.set_index('datetime', inplace=True)
-    df.sort_values('datetime', inplace=True)
+    # turn "CH9 T 23-04-28.log" into "CH9 T"
+    chnl_name = entry.name[:-12].strip()
+
+    data = pd.read_csv(entry.path, header=None)
+
+    # create channel if it doesn't exist
+    if chnl_name not in channels:
+        channels[chnl_name] = Channel(chnl_name)
+    
+    channels[chnl_name].add_data(data)
+    channels[chnl_name].add_path(entry.path)
 
 
-def concatenate_date_dirs(parent):
-    """
-    Used for csv data stored as:
-
-    parent/
-        ├ [day 1 as YY-MM-DD]/
-        │    ├ [channel name 1] YY-MM-DD.[3-letter extension]
-        │    ├ [...]
-        │    └ [channel name n] YY-MM-DD.[3-letter extension]
-        ├ [...]
-        └ [day m as YY-MM-DD]/
-             ├ [channel name 1] YY-MM-DD.log.[3-letter extension]
-             ├ [...]
-             └ [channel name n] YY-MM-DD.log.[3-letter extension]
-
-    For example:
-             
-    Run 19 Logs/
-        ├ [ contents with different naming convention ignored ]
-        ├ 23-04-28/
-        │   ├ CH1 T 23-04-28.log
-        │   ├ CH2 T 23-04-28.log
-        │   └ Flowmeter 23-04-28.log
-        ├ 23-04-26/
-        │   ├ CH1 T 23-04-26.log
-        │   ├ CH2 T 23-04-26.log
-        │   └ Flowmeter 23-04-26.log
-        └ 23-04-27/
-            ├ CH1 T 23-04-27.log
-            ├ CH2 T 23-04-27.log
-            └ Flowmeter 23-04-27.log
-    """
-
-    dirs = chldrn_labeled_with_date(parent)
-
+def _concatenate_into_channels(entries: list[posix.DirEntry]) -> dict[Channel]:
     channels = {}
 
-    for dir in dirs:
+    for dir in entries:
         print(f"Parsing {dir.path}")
 
         date = dir.name
@@ -82,22 +55,46 @@ def concatenate_date_dirs(parent):
             # elif (not df.name.startswith('CH1 T')):
             #     pass
             else:
-                # turn "CH9 T 23-04-28.log" into "CH9 T"
-                chnl_name = df.name[:-12].strip()
+                _injest_file(df, channels)
+    
+    return channels
 
-                data = pd.read_csv(df.path, header=None)
+def prep_dataframe(df: pd.DataFrame):
+    """Sets index of df to datetime (in place), then sorts"""
 
-                # create channel if it doesn't exist
-                if chnl_name not in channels:
-                    channels[chnl_name] = Channel(chnl_name)
-                
-                channels[chnl_name].add_data(data)
-                channels[chnl_name].add_path(df.path)
+    df['datetime'] = pd.to_datetime(df[0] + ' ' + df[1], format="%d-%m-%y %H:%M:%S")
+    df.set_index('datetime', inplace=True)
+    df.sort_values('datetime', inplace=True)
 
+
+def injest_date_dirs(parent: str):
+    """
+    Used for csv data stored (for example) as:
+             
+    parent/
+        ├ [ contents with different naming convention ignored ]
+        ├ 23-04-28/
+        │   ├ CH1 T 23-04-28.log
+        │   ├ CH2 T 23-04-28.log
+        │   └ Flowmeter 23-04-28.log
+        ├ 23-04-26/
+        │   ├ CH1 T 23-04-26.log
+        │   ├ CH2 T 23-04-26.log
+        │   └ Flowmeter 23-04-26.log
+        └ 23-04-27/
+            ├ CH1 T 23-04-27.log
+            ├ CH2 T 23-04-27.log
+            └ Flowmeter 23-04-27.log
+    """
+
+    date_dirs = _chldrn_labeled_with_date(parent)
+    channels = _concatenate_into_channels(date_dirs)
+
+    print("Preparing...")
     for chnl in channels:
         # open the most recent file, so that we may poll it for changes
         channels[chnl].open_recent()
-
+        # sort data and prep indeces
         prep_dataframe(channels[chnl].data)
     
     return channels
@@ -109,7 +106,7 @@ if __name__ == "__main__":
 
     print('Building Data...')
 
-    channels = concatenate_date_dirs(url)
+    channels = injest_date_dirs(url)
     
     print('Available channels:')
 
