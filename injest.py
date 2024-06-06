@@ -3,9 +3,9 @@ import os
 import re
 import warnings
 import pandas as pd
-import posix
 
 from channel import Channel
+import config
 
 def chldrn_labeled_with_date(parent: str):
     """Returns child directories labeled with ##-##-## """
@@ -15,7 +15,7 @@ def chldrn_labeled_with_date(parent: str):
     return [ child for child in contents if (p.match(child.name) and child.is_dir()) ]
 
 
-def _injest_file(entry: posix.DirEntry, channels: dict[Channel]):
+def _injest_file(entry: os.DirEntry, channels: dict[Channel]):
     """Adds data from entry into channels, creating a new one if none exists"""
 
     # turn "CH9 T 23-04-28.log" into "CH9 T"
@@ -31,7 +31,7 @@ def _injest_file(entry: posix.DirEntry, channels: dict[Channel]):
     channels[chnl_name].add_path(entry.path)
 
 
-def _concatenate_into_channels(entries: list[posix.DirEntry]) -> dict[Channel]:
+def _concatenate_into_channels(entries: list[os.DirEntry]) -> dict[Channel]:
     channels = {}
 
     for dir in entries:
@@ -48,8 +48,8 @@ def _concatenate_into_channels(entries: list[posix.DirEntry]) -> dict[Channel]:
             # TODO deal with Status_ files seperately
             elif (df.name.startswith('Status_')):
                 pass
-            # temporarily only consider channel 1
-            elif (not df.name.startswith('CH1 T')):
+            # only consider channel 1 if configured
+            elif (config.ONLY_LOAD_CH1_T and not df.name.startswith('CH1 T')):
                 pass
             else:
                 _injest_file(df, channels)
@@ -74,7 +74,7 @@ def prep_dataframe(df: pd.DataFrame, date_column: int | str, date_fmt: str, time
     df.sort_values('datetime', inplace=True)
 
 
-def injest_date_dirs(date_dirs: list[posix.DirEntry]) -> dict[Channel]:
+def injest_date_dirs(date_dirs: list[os.DirEntry]) -> dict[Channel]:
     """
     Used for csv data stored as:
              

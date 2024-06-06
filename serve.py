@@ -11,19 +11,8 @@ import sys
 import injest
 from channel import Channel
 import helpers
+import config
 
-# approximate upper limit of entries in a response
-# before points start to be sampled.
-# Change this to change the server performance
-SAMPLE_THRESHOLD = 4000
-
-# Format for date queries, in spec with
-# https://docs.python.org/3/library/datetime.html#format-codes
-# should match what you've configured grafana to use
-QUERY_FMT = "%Y-%m-%dT%H:%M:%S"
-
-# Port on which to serve
-PORT = 8080
 
 def update_channel(channel: Channel):
     new_data = channel.file.read()
@@ -71,7 +60,7 @@ def create_server(channels: dict[Channel], request_callback: types.FunctionType 
 
             # if the request extends past the current end to the data,
             # check to see if there is new data
-            end_dt = datetime.strptime(end, QUERY_FMT)
+            end_dt = datetime.strptime(end, config.QUERY_FMT)
             most_recent_entry = channels[channel].data.index[-1]
 
             if (end_dt > most_recent_entry): update_channel(channels[channel])
@@ -85,8 +74,8 @@ def create_server(channels: dict[Channel], request_callback: types.FunctionType 
 
             # For large time scales, we can't return all the points
             # and still be performant. For now, we naïvely sample entries
-            if (results.size > SAMPLE_THRESHOLD):
-                interval = math.floor(results.size / SAMPLE_THRESHOLD)
+            if (results.size > config.SAMPLE_THRESHOLD):
+                interval = math.floor(results.size / config.SAMPLE_THRESHOLD)
                 results = results[::interval]
 
             csv = results.to_csv()
@@ -99,13 +88,13 @@ def create_server(channels: dict[Channel], request_callback: types.FunctionType 
             self.wfile.write(csv.encode())
     
 
-    print(f"Serving at http://localhost:{PORT}/")
+    print(f"Serving at http://localhost:{config.PORT}/")
     print("Available endpoints:")
     for ch in sorted(channels.keys()):
         print(ch)
     print()
 
-    return Server(('localhost', PORT), HTTP_request_handler)
+    return Server(('localhost', config.PORT), HTTP_request_handler)
 
 
 if __name__ == "__main__":
