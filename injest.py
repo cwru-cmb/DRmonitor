@@ -49,12 +49,12 @@ def _concatenate_into_channels(entries: list[os.DirEntry]) -> dict[Channel]:
             elif (df.name.startswith('Status_')):
                 pass
             # only consider channel 1 if configured
-            elif (config.ONLY_LOAD_CH1_T and not df.name.startswith('CH1 T')):
-                pass
+            elif (config.ONLY_LOAD_CH1_T and not df.name.startswith('CH1 T')): pass
             else:
                 _injest_file(df, channels)
     
     return channels
+
 
 def prep_dataframe(df: pd.DataFrame, date_column: int | str, date_fmt: str, time_column: int | str, time_fmt: str):
     """

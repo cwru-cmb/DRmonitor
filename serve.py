@@ -47,7 +47,6 @@ def create_server(channels: dict[Channel], request_callback: types.FunctionType 
             if (request_callback is not None): request_callback()
 
             request = urllib.parse.urlparse(self.path)
-            query = urllib.parse.parse_qs(request.query)
 
             # parse escaped characters (ex. '%3A' becomes ':')
             channel = urllib.parse.unquote(request.path)
@@ -55,17 +54,18 @@ def create_server(channels: dict[Channel], request_callback: types.FunctionType 
             # ignore the leading '/'
             channel = channel.strip('/')
 
-            start = query['from'][0]
-            end = query['to'][0]
-
-            # if the request extends past the current end to the data,
             # check to see if there is new data
-            end_dt = datetime.strptime(end, config.QUERY_FMT)
-            most_recent_entry = channels[channel].data.index[-1]
+            update_channel(channels[channel])
 
-            if (end_dt > most_recent_entry): update_channel(channels[channel])
+            results = channels[channel].data
 
-            results = channels[channel].data[start:end]
+            # If there were query parameters, limit the search
+            query = urllib.parse.parse_qs(request.query)
+            if (query):
+                start = query['from'][0]
+                end = query['to'][0]
+                
+                results = results[start:end]
 
             # if there is nothing to show in the given time range,
             # return the entire range of data so that grafana still
