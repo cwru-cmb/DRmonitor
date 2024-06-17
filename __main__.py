@@ -2,6 +2,7 @@ import sys
 import injest
 import serve
 import helpers
+# import pandas as pd
 
 def main():
     url = sys.argv[1]
@@ -20,6 +21,23 @@ def main():
             new_date_dirs = injest.chldrn_labeled_with_date(url)
             if (len(new_date_dirs) != len(date_dirs)):
                 raise helpers.FolderChangeError
+
+        # total = 0
+        # glance = {}
+        # for c in channels:
+        #     print(c)
+        #     m = channels[c].data.memory_usage(deep=True)
+        #     total += m.sum()
+
+        #     glance[c] = m.sum()
+        #     print(m)
+        #     print()
+
+        # for c in glance: print(f'{c:<15} {glance[c]:>15,}')
+        
+        # print()
+        # print(f"Total: {total:,}")
+        # return
 
         print()
         print("Starting Server...")

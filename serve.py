@@ -1,7 +1,6 @@
 import math
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import urllib
-from datetime import datetime
 import pandas as pd
 import io
 import types
@@ -19,7 +18,7 @@ def update_channel(channel: Channel):
 
     if (len(new_data) != 0):
         new_df = pd.read_csv(io.StringIO(new_data), header=None)
-        injest.prep_dataframe(new_df, 0, "%d-%m-%y", 1, "%H:%M:%S")
+        injest.build_dates(new_df, 0, "%d-%m-%y", 1, "%H:%M:%S")
         channel.add_data(new_df)
 
 
