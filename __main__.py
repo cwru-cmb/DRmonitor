@@ -22,23 +22,6 @@ def main():
             if (len(new_date_dirs) != len(date_dirs)):
                 raise helpers.FolderChangeError
 
-        # total = 0
-        # glance = {}
-        # for c in channels:
-        #     print(c)
-        #     m = channels[c].data.memory_usage(deep=True)
-        #     total += m.sum()
-
-        #     glance[c] = m.sum()
-        #     print(m)
-        #     print()
-
-        # for c in glance: print(f'{c:<15} {glance[c]:>15,}')
-        
-        # print()
-        # print(f"Total: {total:,}")
-        # return
-
         print()
         print("Starting Server...")
 

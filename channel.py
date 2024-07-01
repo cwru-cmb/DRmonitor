@@ -28,9 +28,15 @@ class Channel:
     
     def add_data(self, newData: pd.DataFrame | list):
         """Appends newData to previous data using pandas.concat"""
-        # TODO retest live data
-        if (self.data is None): self.data = pd.DataFrame(newData)
-        else: self.data = pd.concat((self.data, pd.DataFrame(newData)))
+        df = pd.DataFrame(newData)
+
+        df.set_index('datetime', inplace=True)
+
+        if (self.data is None): self.data = df
+        else: self.data = pd.concat((self.data, df))
+
+        self.data.sort_values('datetime', inplace=True)
+    
     
     def add_path(self, path: str):
         """"Adds file path to the list of contributing file paths"""

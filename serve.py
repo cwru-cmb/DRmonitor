@@ -13,13 +13,21 @@ import helpers
 import config
 
 
-def update_channel(channel: Channel):
-    new_data = channel.file.read()
+def update_channel(chnl_to_update: str, channels: dict[Channel]):
+    new_txt = channels[chnl_to_update].file.read()
 
-    if (len(new_data) != 0):
-        new_df = pd.read_csv(io.StringIO(new_data), header=None)
-        injest.build_dates(new_df, 0, "%d-%m-%y", 1, "%H:%M:%S")
-        channel.add_data(new_df)
+    if (len(new_txt) != 0):
+        dfs = injest.text_to_dfs(new_txt, chnl_to_update)
+
+        for name in dfs:
+            # create a new channel if it doesn't already exist
+            if name not in channels:
+                channels[name] = Channel(name)
+                channels[name].file = channels[chnl_to_update].file
+            
+            channels[name].add_data(dfs[name])
+        
+        # TODO: remove added duplicates as well
 
 
 # Usual HTTPServer class, modified to let certain errors through
@@ -54,7 +62,7 @@ def create_server(channels: dict[Channel], request_callback: types.FunctionType 
             channel = channel.strip('/')
 
             # check to see if there is new data
-            update_channel(channels[channel])
+            update_channel(channel, channels)
 
             results = channels[channel].data
 
