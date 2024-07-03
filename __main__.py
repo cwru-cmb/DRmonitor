@@ -1,16 +1,15 @@
-import sys
 import injest
 import serve
 import helpers
-# import pandas as pd
+import cli
 
 def main():
-    url = sys.argv[1]
+    args = cli.get_arguments()
 
     while True:
         print('Building Data...')
 
-        date_dirs = injest.chldrn_labeled_with_date(url)
+        date_dirs = injest.chldrn_labeled_with_date(args.path)
 
         # All data is stored in the channels dictionary
         channels = injest.injest_date_dirs(date_dirs)
@@ -18,7 +17,7 @@ def main():
         # checks to see if the number of folders has changed,
         # and if it has, throws an error 
         def check_for_new_day():
-            new_date_dirs = injest.chldrn_labeled_with_date(url)
+            new_date_dirs = injest.chldrn_labeled_with_date(args.path)
             if (len(new_date_dirs) != len(date_dirs)):
                 raise helpers.FolderChangeError
 
@@ -26,7 +25,9 @@ def main():
         print("Starting Server...")
 
         # Start the server
-        httpd = serve.create_server(channels, check_for_new_day)
+        httpd = serve.create_server(channels,
+                                    args,
+                                    check_for_new_day)
 
         try:
             httpd.serve_forever()

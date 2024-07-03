@@ -6,11 +6,11 @@ import io
 import types
 import traceback
 import sys
+import argparse
 
 import injest
 from channel import Channel
 import helpers
-import config
 
 
 def update_channel(chnl_to_update: str, channels: dict[Channel]):
@@ -48,7 +48,9 @@ class Server(HTTPServer):
         print('-'*40, file=sys.stderr)
 
 
-def create_server(channels: dict[Channel], request_callback: types.FunctionType | None = None):
+def create_server(channels: dict[Channel],
+                  args: argparse.Namespace,
+                  request_callback: types.FunctionType | None = None,):
     class HTTP_request_handler(BaseHTTPRequestHandler):
 
         def do_GET(self):
@@ -85,13 +87,13 @@ def create_server(channels: dict[Channel], request_callback: types.FunctionType 
             first_dt = results.index[0]
             last_dt = results.index[-1]
             s = max(full_df.index.get_loc(first_dt) - 1, 0)
-            e = min(full_df.index.get_loc(last_dt) + 1, full_df.size - 1)
-            results = full_df[s:e]
+            e = min(full_df.index.get_loc(last_dt) + 1, len(full_df.index) - 1)
+            results = full_df[s:e + 1]
 
             # For large time scales, we can't return all the points
             # and still be performant. For now, we naïvely sample entries
-            if (results.size > config.SAMPLE_THRESHOLD):
-                interval = math.floor(results.size / config.SAMPLE_THRESHOLD)
+            if (results.size > args.sample_threshold):
+                interval = math.floor(len(results.index) / args.sample_threshold)
                 results = results[::interval]
 
             # make sure that the last point didn't get removed in the sampling
@@ -109,13 +111,13 @@ def create_server(channels: dict[Channel], request_callback: types.FunctionType 
             self.wfile.write(csv.encode())
     
 
-    print(f"Serving at http://localhost:{config.PORT}/")
+    print(f"Serving at http://{args.hostname}:{args.port}/")
     print("Available endpoints:")
     for ch in sorted(channels.keys()):
         print(ch)
     print()
 
-    return Server(('localhost', config.PORT), HTTP_request_handler)
+    return Server((args.hostname, args.port), HTTP_request_handler)
 
 
 if __name__ == "__main__":
