@@ -49,7 +49,7 @@ def _Status_handler(lines: list[list[str]]) -> dict[pd.DataFrame]:
     
     return new_channels
 
-# this is it's own function so that we can use it when updating dataframes
+# this is its own function so that we can use it when updating dataframes
 def text_to_dfs(text: str, name: str) -> dict[pd.DataFrame]:
     lines = [s.split(',') for s in text.splitlines()]
 
@@ -61,7 +61,7 @@ def text_to_dfs(text: str, name: str) -> dict[pd.DataFrame]:
     return dataframes
 
 
-def _add_file_to_channels(entry: os.DirEntry, date: str, channels: dict[Channel]) -> None:
+def _add_file_to_channels(entry: os.DirEntry, date: str, channels: dict[Channel]):
     # if configured for debugging, only skip all channels but CH1 T
     if (config.ONLY_LOAD_CH1_T and not entry.name.startswith('CH1 T')): pass
 
@@ -86,6 +86,12 @@ def _add_file_to_channels(entry: os.DirEntry, date: str, channels: dict[Channel]
             
             channels[data_name].add_data(dfs[data_name])
             channels[data_name].add_path(entry.path)
+
+
+def remove_status_duplicates(df: pd.DataFrame) -> pd.DataFrame:
+    df['value'] = df['value'].astype('float')
+    unique = ((df != df.shift(1)) | (df != df.shift(-1)))['value']
+    return df[unique]
 
 
 def injest_date_dirs(date_dirs: list[os.DirEntry]) -> dict[Channel]:
@@ -135,10 +141,6 @@ def injest_date_dirs(date_dirs: list[os.DirEntry]) -> dict[Channel]:
 
         # remove consecutive duplicate values from 'status' dataframes
         elif (chnl.startswith('status')):
-            df = channels[chnl].data
-            df['value'] = df['value'].astype('float')
+            channels[chnl].data = remove_status_duplicates(channels[chnl].data)
 
-            unique = ((df != df.shift(1)) | (df != df.shift(-1)))['value']
-
-            channels[chnl].data = df[unique]
     return channels

@@ -26,8 +26,9 @@ def update_channel(chnl_to_update: str, channels: dict[Channel]):
                 channels[name].file = channels[chnl_to_update].file
             
             channels[name].add_data(dfs[name])
-        
-        # TODO: remove added duplicates as well
+
+            if (name.startswith('status')):
+                channels[name].data = injest.remove_status_duplicates(channels[name].data)
 
 
 # Usual HTTPServer class, modified to let certain errors through
@@ -64,7 +65,8 @@ def create_server(channels: dict[Channel], request_callback: types.FunctionType 
             # check to see if there is new data
             update_channel(channel, channels)
 
-            results = channels[channel].data
+            full_df = channels[channel].data
+            results = full_df
 
             # If there were query parameters, limit the search
             query = urllib.parse.parse_qs(request.query)
@@ -77,7 +79,14 @@ def create_server(channels: dict[Channel], request_callback: types.FunctionType 
             # if there is nothing to show in the given time range,
             # return the entire range of data so that grafana still
             # has something to work with and can show the "zoom to data" button
-            if (results.size == 0): results = channels[channel].data
+            if (results.size == 0): results = full_df
+
+            # include the one point before and after the range
+            first_dt = results.index[0]
+            last_dt = results.index[-1]
+            s = max(full_df.index.get_loc(first_dt) - 1, 0)
+            e = min(full_df.index.get_loc(last_dt) + 1, full_df.size - 1)
+            results = full_df[s:e]
 
             # For large time scales, we can't return all the points
             # and still be performant. For now, we naïvely sample entries
@@ -85,9 +94,14 @@ def create_server(channels: dict[Channel], request_callback: types.FunctionType 
                 interval = math.floor(results.size / config.SAMPLE_THRESHOLD)
                 results = results[::interval]
 
-            csv = results.to_csv()
+            # make sure that the last point didn't get removed in the sampling
+            new_last_dt = results.index[-1]
+            desired_last_dt = full_df.index[e]
+            if (new_last_dt != desired_last_dt):
+                results = pd.concat((results, full_df[e:e+1]))
 
-            # TODO: error handling, file not found
+            # send results
+            csv = results.to_csv()
 
             self.send_response(200)
             self.send_header('Content-Type', 'text/csv')
