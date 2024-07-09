@@ -13,7 +13,7 @@ from channel import Channel
 import helpers
 
 
-def update_channel(chnl_to_update: str, channels: dict[Channel]):
+def update_channel(chnl_to_update: str, channels: dict[str, Channel]):
     new_txt = channels[chnl_to_update].file.read()
 
     if (len(new_txt) != 0):
@@ -24,11 +24,12 @@ def update_channel(chnl_to_update: str, channels: dict[Channel]):
             if name not in channels:
                 channels[name] = Channel(name)
                 channels[name].file = channels[chnl_to_update].file
-            
+
             channels[name].add_data(dfs[name])
 
             if (name.startswith('status')):
-                channels[name].data = injest.remove_status_duplicates(channels[name].data)
+                channels[name].data = injest.remove_status_duplicates(
+                    channels[name].data)
 
 
 # Usual HTTPServer class, modified to let certain errors through
@@ -38,23 +39,25 @@ class Server(HTTPServer):
         e = sys.exception()
 
         # Reraise FolderChangeError, which ultimatly restarts the server
-        if isinstance(e, helpers.FolderChangeError): raise e
+        if isinstance(e, helpers.FolderChangeError):
+            raise e
 
         # Otherwise do the default behavior and keep serving
         print('-'*40, file=sys.stderr)
         print('Exception occurred during processing of request from',
-            client_address, file=sys.stderr)
+              client_address, file=sys.stderr)
         traceback.print_exception(e)
         print('-'*40, file=sys.stderr)
 
 
-def create_server(channels: dict[Channel],
+def create_server(channels: dict[str, Channel],
                   args: argparse.Namespace,
                   request_callback: types.FunctionType | None = None,):
     class HTTP_request_handler(BaseHTTPRequestHandler):
 
         def do_GET(self):
-            if (request_callback is not None): request_callback()
+            if (request_callback is not None):
+                request_callback()
 
             request = urllib.parse.urlparse(self.path)
 
@@ -75,13 +78,14 @@ def create_server(channels: dict[Channel],
             if (query):
                 start = query['from'][0]
                 end = query['to'][0]
-                
+
                 results = results[start:end]
 
             # if there is nothing to show in the given time range,
             # return the entire range of data so that grafana still
             # has something to work with and can show the "zoom to data" button
-            if (results.size == 0): results = full_df
+            if (results.size == 0):
+                results = full_df
 
             # include the one point before and after the range
             first_dt = results.index[0]
@@ -93,7 +97,8 @@ def create_server(channels: dict[Channel],
             # For large time scales, we can't return all the points
             # and still be performant. For now, we naïvely sample entries
             if (results.size > args.sample_threshold):
-                interval = math.floor(len(results.index) / args.sample_threshold)
+                interval = math.floor(
+                    len(results.index) / args.sample_threshold)
                 results = results[::interval]
 
             # make sure that the last point didn't get removed in the sampling
@@ -109,7 +114,6 @@ def create_server(channels: dict[Channel],
             self.send_header('Content-Type', 'text/csv')
             self.end_headers()
             self.wfile.write(csv.encode())
-    
 
     print(f"Serving at http://{args.hostname}:{args.port}/")
     print("Available endpoints:")
@@ -128,4 +132,3 @@ if __name__ == "__main__":
     channels = injest._dirs('url/to/data')
     
     serve.serve(channels)""")
-

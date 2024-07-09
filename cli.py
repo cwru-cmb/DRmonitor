@@ -1,21 +1,22 @@
 import argparse
 
+
 def get_arguments() -> argparse.Namespace:
     description = "Reads the logs from a Bluefors fridge and serves them for querying"
 
     parser = argparse.ArgumentParser(description=description,
-                                        prog='DRmonitor',)
+                                     prog='DRmonitor',)
     parser.add_argument('path',
                         metavar='PATH',
                         help="The path to the directory containing the logs")
 
     parser.add_argument('--host', '--hostname',
-                    help="The hostname or IP address to bind to",
-                    default='localhost',
-                    type=str,
-                    dest='hostname',
-                    metavar='HOSTNAME',
-                    required=False)
+                        help="The hostname or IP address to bind to",
+                        default='localhost',
+                        type=str,
+                        dest='hostname',
+                        metavar='HOSTNAME',
+                        required=False)
 
     parser.add_argument('-p', '--port',
                         help="The port to serve from",
@@ -33,5 +34,5 @@ def get_arguments() -> argparse.Namespace:
                         default=4000,
                         dest='sample_threshold',
                         required=False)
-    
+
     return parser.parse_args()

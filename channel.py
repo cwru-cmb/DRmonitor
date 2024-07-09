@@ -16,28 +16,28 @@ class Channel:
         name: the name of the channel
     """
 
-    def __init__(self, name: str | None = None):
+    def __init__(self, name: str):
         self.name: str = name
         self.paths: list[str] = []
-        self.data: pd.DataFrame | None = None
-        self.file: io.TextIOWrapper | None = None
+        self.data: pd.DataFrame = pd.DataFrame()
 
         return
 
     def _d(self, date): return datetime.strptime(date, "%y-%m-%d")
-    
+
     def add_data(self, newData: pd.DataFrame | list):
         """Appends newData to previous data using pandas.concat"""
         df = pd.DataFrame(newData)
 
         df.set_index('datetime', inplace=True)
 
-        if (self.data is None): self.data = df
-        else: self.data = pd.concat((self.data, df))
+        if (self.data is None):
+            self.data = df
+        else:
+            self.data = pd.concat((self.data, df))
 
         self.data.sort_values('datetime', inplace=True)
-    
-    
+
     def add_path(self, path: str):
         """"Adds file path to the list of contributing file paths"""
         self.paths.append(path)
@@ -46,7 +46,8 @@ class Channel:
         """
         Returns the path with the most recent date. Assumes all paths are of the form "[name]yy-mm-dd.[3 letter extension]"
         """
-        if (len(self.paths) is 0): return None
+        if (len(self.paths) == 0):
+            return None
 
         mrp = self.paths[0]
         for path in self.paths:
@@ -56,20 +57,15 @@ class Channel:
 
             if (self._d(cur_date) > self._d(prev_date)):
                 mrp = path
-        
+
         return mrp
-    
+
     def open_recent(self):
         """
         Opens the most recent file in paths
         """
         path = self.most_recent_path()
-        
         self.file = open(path, 'r')
 
         # place the current read head at the end of the file
         self.file.seek(0, os.SEEK_END)
-
-
-
-
