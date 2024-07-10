@@ -106,8 +106,8 @@ def _add_file_to_channels(entry: os.DirEntry, date: str, channels: dict[str, Cha
 
     # warn if the file is not named in the usual way
     elif (not entry.name.endswith(f'{date}.log')):
-        warnings.warn(f'The file {entry.path} is not of the form "[name] {
-                      date}.log" and will be ignored')
+        warnings.warn(
+            f'The file {entry.path} is not of the form "[name] {date}.log" and will be ignored')
 
     else:
         # turn "CH9 T 23-04-28.log" into "CH9 T"
