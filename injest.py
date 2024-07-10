@@ -29,6 +29,36 @@ def _CH_handler(lines: list[list[str]]) -> pd.DataFrame:
     return data
 
 
+def _Maxigauge_handler(lines: list[list[str]]) -> dict[str, pd.DataFrame]:
+    data_groups: dict[str, list] = {}
+
+    # line by line, field by field, parse dates and sort values
+    for l in lines:
+        d = datetime.strptime(l[0] + " " + l[1], "%d-%m-%y %H:%M:%S")
+        i = 2
+        while i < len(l) - 1:
+            try:
+                data_groups[l[i]].append([d, l[i+2], l[i + 3], l[i + 4]])
+            except KeyError:
+                data_groups[l[i]] = [[d, l[i+2], l[i + 3], l[i + 4]]]
+            i += 6
+
+    # turn the grouped arrays into a dictionary of dataframes
+    new_channels = {}
+    for group_name in data_groups:
+        chnl_name = f'maxigauge/{group_name}'
+        df = pd.DataFrame(data_groups[group_name])
+        df.rename(columns={
+            0: 'datetime',
+            1: 'on/off',
+            2: 'value',
+            3: 'range'},
+            inplace=True)
+        new_channels[chnl_name] = df
+
+    return new_channels
+
+
 def _Status_handler(lines: list[list[str]]) -> dict[str, pd.DataFrame]:
     data_groups: dict[str, list] = {}
 
@@ -53,8 +83,6 @@ def _Status_handler(lines: list[list[str]]) -> dict[str, pd.DataFrame]:
 
     return new_channels
 
-# this is its own function so that we can use it when updating dataframes
-
 
 def text_to_dfs(text: str, name: str) -> dict[str, pd.DataFrame]:
     lines = [s.split(',') for s in text.splitlines()]
@@ -63,6 +91,8 @@ def text_to_dfs(text: str, name: str) -> dict[str, pd.DataFrame]:
     dataframes = {}
     if (name.lower().startswith('status')):
         dataframes = _Status_handler(lines)
+    elif (name.lower().startswith('maxigauge')):
+        dataframes = _Maxigauge_handler(lines)
     else:
         dataframes[name] = _CH_handler(lines)
 
@@ -142,11 +172,7 @@ def injest_date_dirs(date_dirs: list[os.DirEntry]) -> dict[str, Channel]:
         # to reduce memory use, repeated strings are stored as type 'category'
         # for maxiguage, this is every 6th column,
         # for Channles, this is every other column
-        if (chnl.startswith("maxigauge")):
-            for i in range(2, len(df.columns)):
-                if (((i - 1) % 6) <= 2):
-                    df[i] = df[i].astype('category')
-        elif (chnl.startswith("Channels")):
+        if (chnl.startswith("Channels")):
             for i in range(2, len(df.columns)):
                 if (((i - 1) % 2) == 0):
                     df[i] = df[i].astype('category')

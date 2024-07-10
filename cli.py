@@ -7,32 +7,41 @@ def get_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=description,
                                      prog='DRmonitor',)
     parser.add_argument('path',
-                        metavar='PATH',
-                        help="The path to the directory containing the logs")
+                        metavar='path',
+                        help="the path to the directory containing the logs")
 
-    parser.add_argument('--host', '--hostname',
-                        help="The hostname or IP address to bind to",
+    parser.add_argument('--host',
+                        help="the hostname or IP address to bind to",
                         default='localhost',
                         type=str,
                         dest='hostname',
-                        metavar='HOSTNAME',
+                        metavar='host',
                         required=False)
 
-    parser.add_argument('-p', '--port',
-                        help="The port to serve from",
+    parser.add_argument('-p',
+                        help="the port to serve from",
                         default=8080,
                         type=int,
                         dest='port',
+                        metavar='port',
                         required=False)
 
-    parser.add_argument('-l', '--point_limit',
+    parser.add_argument('-l',
                         metavar="N",
-                        help="""Approximate upper limit of entries in a response
+                        help="""approximate upper limit of entries in a response
                         before points start to be sampled. Change this to change
                         the server performance""",
                         type=int,
                         default=4000,
                         dest='sample_threshold',
                         required=False)
+
+    parser.add_argument('--cache',
+                        action='store_true',
+                        help="""use a pickled version of the Channels data instead
+                        of rebuilding them from scratch. Looks for 'tk', creating
+                        it if none exists. This is useful for debugging, but shouldn't
+                        be used during an actual run.""",
+                        dest='usecache')
 
     return parser.parse_args()
