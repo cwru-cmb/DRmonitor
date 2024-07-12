@@ -32,6 +32,52 @@ def update_channel(chnl_to_update: str, channels: dict[str, Channel]):
                     channels[name].data)
 
 
+def _filter_by_request(data: pd.DataFrame, request: urllib.parse.ParseResult, args: argparse.Namespace):
+    results = data
+
+    # If there were query parameters, limit the search
+    query = urllib.parse.parse_qs(request.query)
+    if (query):
+        # if "current" is included, just return the most recent value
+        if ('last' in query and query['last'][0].lower() == 'true'):
+            results = results[-1:]
+            return results
+
+        # otherwise, limit the data by date
+        start = query['from'][0]
+        end = query['to'][0]
+
+        results = results[start:end]
+
+    # if there is nothing to show in the given time range,
+    # return the entire range of data so that grafana still
+    # has something to work with and can show the "zoom to data" button
+    if (results.size == 0):
+        results = data
+
+    # include the one point before and after the range
+    first_dt = results.index[0]
+    last_dt = results.index[-1]
+    s = max(data.index.get_loc(first_dt) - 1, 0)
+    e = min(data.index.get_loc(last_dt) + 1, len(data.index) - 1)
+    results = data[s:e + 1]
+
+    # For large time scales, we can't return all the points
+    # and still be performant. For now, we naïvely sample entries
+    if (len(results.index) > args.sample_threshold):
+        interval = math.floor(
+            len(results.index) / args.sample_threshold)
+        results = results[::interval]
+
+    # make sure that the last point didn't get removed in the sampling
+    new_last_dt = results.index[-1]
+    desired_last_dt = data.index[e]
+    if (new_last_dt != desired_last_dt):
+        results = pd.concat((results, data[e:e+1]))
+
+    return results
+
+
 # Usual HTTPServer class, modified to let certain errors through
 class Server(HTTPServer):
     def handle_error(self, request, client_address):
@@ -70,42 +116,7 @@ def create_server(channels: dict[str, Channel],
             # check to see if there is new data
             update_channel(channel, channels)
 
-            full_df = channels[channel].data
-            results = full_df
-
-            # If there were query parameters, limit the search
-            query = urllib.parse.parse_qs(request.query)
-            if (query):
-                start = query['from'][0]
-                end = query['to'][0]
-
-                results = results[start:end]
-
-            # if there is nothing to show in the given time range,
-            # return the entire range of data so that grafana still
-            # has something to work with and can show the "zoom to data" button
-            if (results.size == 0):
-                results = full_df
-
-            # include the one point before and after the range
-            first_dt = results.index[0]
-            last_dt = results.index[-1]
-            s = max(full_df.index.get_loc(first_dt) - 1, 0)
-            e = min(full_df.index.get_loc(last_dt) + 1, len(full_df.index) - 1)
-            results = full_df[s:e + 1]
-
-            # For large time scales, we can't return all the points
-            # and still be performant. For now, we naïvely sample entries
-            if (results.size > args.sample_threshold):
-                interval = math.floor(
-                    len(results.index) / args.sample_threshold)
-                results = results[::interval]
-
-            # make sure that the last point didn't get removed in the sampling
-            new_last_dt = results.index[-1]
-            desired_last_dt = full_df.index[e]
-            if (new_last_dt != desired_last_dt):
-                results = pd.concat((results, full_df[e:e+1]))
+            results = _filter_by_request(channels[channel].data, request, args)
 
             # send results
             csv = results.to_csv()

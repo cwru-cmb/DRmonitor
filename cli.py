@@ -36,12 +36,4 @@ def get_arguments() -> argparse.Namespace:
                         dest='sample_threshold',
                         required=False)
 
-    parser.add_argument('--cache',
-                        action='store_true',
-                        help="""use a pickled version of the Channels data instead
-                        of rebuilding them from scratch. Looks for 'tk', creating
-                        it if none exists. This is useful for debugging, but shouldn't
-                        be used during an actual run.""",
-                        dest='usecache')
-
     return parser.parse_args()
