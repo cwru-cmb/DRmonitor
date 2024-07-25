@@ -1,6 +1,8 @@
 # README
 This library is used to view the log files from BLUEFORS using tools like Grafana.
 
+![hero](https://github.com/user-attachments/assets/2d49d38f-06b1-455d-a379-05de45fdfe83)
+
 ## Installation
 It is recommended to install and activate a virtual environment. Make a copy of this repository and inside run:
 ```bash
