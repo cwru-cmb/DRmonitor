@@ -58,8 +58,16 @@ def _filter_by_request(data: pd.DataFrame, request: urllib.parse.ParseResult, ar
     # include the one point before and after the range
     first_dt = results.index[0]
     last_dt = results.index[-1]
-    s = max(data.index.get_loc(first_dt) - 1, 0)
-    e = min(data.index.get_loc(last_dt) + 1, len(data.index) - 1)
+
+    s = data.index.get_loc(first_dt)
+    e = data.index.get_loc(last_dt)
+    if (type(s) == slice):
+        s = s.start
+    if (type(e) == slice):
+        e = e.stop - 1
+
+    s = max(s - 1, 0)
+    e = min(e + 1, len(data.index) - 1)
     results = data[s:e + 1]
 
     # For large time scales, we can't return all the points
