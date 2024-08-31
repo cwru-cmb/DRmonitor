@@ -1,4 +1,4 @@
-# README
+# DRmonitor
 Real-time monitoring of BLUEFORS dilution refrigerator logs using tools like Grafana.
 
 ![hero](https://github.com/user-attachments/assets/2d49d38f-06b1-455d-a379-05de45fdfe83)
